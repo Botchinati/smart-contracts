@@ -12,6 +12,8 @@ contract DealManager is IDealManager {
 
     uint256 public constant DEAL_LIFESPAN = 100000;
     uint64 public constant APPEAL_PERIOD = 100000;
+    uint64 public constant VALIDATE_PERIOD = 100000;
+
     uint64 public constant VALIDATOR_FEE_PERCENTAGE = 2000; // 2%
     uint64 public constant MODERATOR_FEE_PERCENTAGE = 1000; // 2%
     uint64 public constant BASIS_POINTS = 10000; // 100%
@@ -45,11 +47,11 @@ contract DealManager is IDealManager {
         address validator,
         uint256 deadline,
         uint256 tokenAmount
-    ) public {
+    ) public returns (bytes32) {
         if (validator == address(0)) {
             revert InvalidAddress();
         }
-
+        agentRegistry.isValidator(validator);
         bytes32 dealID = keccak256(
             abi.encodePacked(msg.sender, deadline, block.timestamp)
         );
@@ -72,28 +74,31 @@ contract DealManager is IDealManager {
             validator,
             block.timestamp + DEAL_LIFESPAN
         );
+        return dealID;
     }
 
     function acceptDeal(bytes32 dealID) public {
         Deal storage deal = deals[dealID];
         if (deal.influencer != msg.sender) revert NotAuthorized();
+
         if (deal.state != State.CREATED) {
             revert DealCannotBeAccepted();
         }
         deal.influencer = msg.sender;
         deal.state = State.APPLIED;
-        emit DealAccepted(dealID, msg.sender);
+        emit DealAccepted(dealID, deal.validator);
     }
 
-    function setDealResult(bytes32 dealID) public {
+    function setDealResult(bytes32 dealID, State result) public {
         agentRegistry.isValidator(msg.sender);
 
         Deal storage deal = deals[dealID];
+        if (deal.validator != msg.sender) revert NotAuthorized();
         if (deal.state != State.APPLIED) {
-            revert DealCannotBeAccepted();
+            revert DealWasNotAccepted();
         }
-        deal.state = State.VALIDATED;
-        emit DealValidated(dealID, msg.sender);
+        deal.state = result;
+        emit DealValidated(dealID, result);
     }
 
     function revertDeal(bytes32 dealID) public {
@@ -129,9 +134,19 @@ contract DealManager is IDealManager {
         Deal storage deal = deals[dealID];
         if (deal.influencer != msg.sender || deal.business != msg.sender)
             revert NotAuthorized();
-        if (deal.state != State.VALIDATED) {
+
+        if (deal.state == State.APPLIED) {
+            //If deal wasn't validated yet
+            if (deal.deadline + VALIDATE_PERIOD > block.timestamp) {
+                // If validate period is not over
+                revert DealCannotBeAppealed(); // Can't appeal to a deal
+            }
+        } else if (
+            deal.state != State.REJECTED && deal.state != State.VALIDATED
+        ) {
             revert DealCannotBeAppealed();
         }
+
         deal.state = State.APPEAL;
         emit DealAppealed(dealID, msg.sender);
     }

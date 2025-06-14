@@ -10,6 +10,12 @@ interface IAgentRegistry {
         bool executed;
     }
 
+    struct Agent {
+        uint8 rating;
+        bool slashed;
+        AgentType agentType;
+    }
+
     // Events
     event AgentJoined(address indexed agent, AgentType indexed agentType);
     event AgentLeft(address indexed agent, AgentType indexed agentType);
@@ -25,7 +31,7 @@ interface IAgentRegistry {
     event AgentSlashed(
         address indexed agent,
         AgentType indexed agentType,
-        address indexed slasher
+        address indexed slashed
     );
 
     // Errors
@@ -39,6 +45,8 @@ interface IAgentRegistry {
     error AlreadyApproved();
     error NotEnoughApprovals();
     error NotAuthorized();
+    error SlashedAgent();
+    error Duplicate();
 
     enum AgentType {
         VALIDATOR,

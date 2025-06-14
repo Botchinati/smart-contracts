@@ -29,8 +29,8 @@ interface IDealManager {
         address indexed validator,
         uint256 deadline
     );
-    event DealAccepted(bytes32 indexed dealID, address indexed influencer);
-    event DealValidated(bytes32 indexed dealID, address indexed validator);
+    event DealAccepted(bytes32 indexed dealID, address indexed validator);
+    event DealValidated(bytes32 indexed dealID, State indexed result);
     event DealReverted(bytes32 indexed dealID, address indexed business);
     event DealWithdrawn(bytes32 indexed dealID, address indexed influencer);
     event DealAppealed(bytes32 indexed dealID, address indexed business);
@@ -46,16 +46,17 @@ interface IDealManager {
     error DealIsNotOnAppeal();
     error NotAuthorized();
     error InvalidFeeCalculation();
+    error DealWasNotAccepted();
 
     // Functions
     function createDeal(
         address validator,
         uint256 deadline,
         uint256 tokenAmount
-    ) external;
+    ) external returns (bytes32);
 
     function acceptDeal(bytes32 dealID) external;
-    function setDealResult(bytes32 dealID) external;
+    function setDealResult(bytes32 dealID, State result) external;
     function revertDeal(bytes32 dealID) external;
     function withdrawPayment(bytes32 dealID) external;
     function appealDeal(bytes32 dealID) external;
