@@ -1,7 +1,6 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-import "./tasks/agent";
-import "./tasks/deal";
+
 import * as dotenv from "dotenv";
 
 dotenv.config();

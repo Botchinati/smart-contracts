@@ -11,6 +11,7 @@ interface IAgentRegistry {
     }
 
     struct Agent {
+        bool joined;
         bool slashed;
         AgentType agentType;
     }

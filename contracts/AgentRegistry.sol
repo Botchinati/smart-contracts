@@ -24,11 +24,14 @@ contract AgentRegistry is Ownable, IAgentRegistry {
     constructor(address _owner) Ownable(_owner) {}
 
     function joinAsAgent(AgentType _agentType) external payable override {
-        if (
-            agents[msg.sender].agentType == AgentType.VALIDATOR &&
-            agents[msg.sender].agentType == AgentType.MODERATOR
-        ) {
+        if (agents[msg.sender].joined == true) {
             revert AlreadyRegistered(); // check if agent does not have other role;
+        }
+        if (
+            _agentType != AgentType.VALIDATOR &&
+            _agentType != AgentType.MODERATOR
+        ) {
+            revert InvalidAgentType();
         }
         if (agents[msg.sender].slashed) revert SlashedAgent(); // check if agent was slashed;
 
@@ -37,15 +40,12 @@ contract AgentRegistry is Ownable, IAgentRegistry {
             revert InvalidStakeAmount();
         }
 
-        agents[msg.sender] = Agent(false, _agentType);
+        agents[msg.sender] = Agent(true, false, _agentType);
         emit AgentJoined(msg.sender, _agentType);
     }
 
     function leaveAsAgent() external override {
-        if (
-            agents[msg.sender].agentType == AgentType.VALIDATOR ||
-            agents[msg.sender].agentType == AgentType.MODERATOR
-        ) {
+        if (agents[msg.sender].joined != true) {
             revert NotRegistered();
         }
         if (agents[msg.sender].slashed) revert SlashedAgent();
@@ -127,14 +127,15 @@ contract AgentRegistry is Ownable, IAgentRegistry {
 
     function isValidator(address agent) external view override returns (bool) {
         return
+            agents[agent].joined &&
             agents[agent].agentType == AgentType.VALIDATOR &&
-            agents[agent].slashed;
+            !agents[agent].slashed;
     }
 
     function isModerator(address agent) external view override returns (bool) {
         return
             agents[agent].agentType == AgentType.MODERATOR &&
-            agents[agent].slashed;
+            !agents[agent].slashed;
     }
 
     function getAgentType(
