@@ -51,6 +51,8 @@ interface IDealManager {
     // Functions
     function createDeal(
         address validator,
+        address influencer,
+        bytes32 content,
         uint256 deadline,
         uint256 tokenAmount
     ) external returns (bytes32);

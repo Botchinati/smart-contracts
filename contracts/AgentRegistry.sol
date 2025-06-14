@@ -37,7 +37,7 @@ contract AgentRegistry is Ownable, IAgentRegistry {
             revert InvalidStakeAmount();
         }
 
-        agents[msg.sender] = Agent(0, false, _agentType);
+        agents[msg.sender] = Agent(false, _agentType);
         emit AgentJoined(msg.sender, _agentType);
     }
 

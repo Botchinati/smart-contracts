@@ -10,23 +10,23 @@ import {IDealManager} from "./interfaces/IDealManager.sol";
 contract DealManager is IDealManager {
     using SafeERC20 for IERC20;
 
-    uint256 public constant DEAL_LIFESPAN = 100000;
-    uint64 public constant APPEAL_PERIOD = 100000;
-    uint64 public constant VALIDATE_PERIOD = 100000;
+    uint256 public constant DEAL_LIFESPAN = 2 * 7 * 24 * 60 * 60; // 2 weeks in seconds
+    uint64 public constant APPEAL_PERIOD = 1 * 7 * 24 * 60 * 60; // 2 weeks in seconds
+    uint64 public constant VALIDATE_PERIOD = 10 * 60; // 10 minutes  in seconds
 
     uint64 public constant VALIDATOR_FEE_PERCENTAGE = 2000; // 2%
-    uint64 public constant MODERATOR_FEE_PERCENTAGE = 1000; // 2%
-    uint64 public constant BASIS_POINTS = 10000; // 100%
+    uint64 public constant MODERATOR_FEE_PERCENTAGE = 10000; // 10%
+    uint64 public constant BASIS_POINTS = 100000; // 100%
 
     AgentRegistry immutable agentRegistry;
     IERC20 immutable USDT;
 
     mapping(bytes32 => Deal) public deals;
+    mapping(address => bytes32) public influencerDeals;
 
     constructor(address payable _agentRegistry, address _usdt) {
         agentRegistry = AgentRegistry(_agentRegistry);
         USDT = IERC20(_usdt);
-        //TREASURY = _treasury;
     }
 
     function calculateFee(
@@ -45,6 +45,8 @@ contract DealManager is IDealManager {
 
     function createDeal(
         address validator,
+        address influencer,
+        bytes32 content,
         uint256 deadline,
         uint256 tokenAmount
     ) public returns (bytes32) {
@@ -60,13 +62,15 @@ contract DealManager is IDealManager {
 
         deals[dealID] = Deal(
             msg.sender,
-            address(0),
-            bytes32(0),
+            influencer,
+            content,
             tokenAmount,
             validator,
             block.timestamp + DEAL_LIFESPAN,
             State.CREATED
         );
+
+        influencerDeals[influencer] = dealID;
 
         emit DealProposalCreated(
             dealID,
@@ -84,7 +88,6 @@ contract DealManager is IDealManager {
         if (deal.state != State.CREATED) {
             revert DealCannotBeAccepted();
         }
-        deal.influencer = msg.sender;
         deal.state = State.APPLIED;
         emit DealAccepted(dealID, deal.validator);
     }
@@ -132,8 +135,9 @@ contract DealManager is IDealManager {
 
     function appealDeal(bytes32 dealID) public {
         Deal storage deal = deals[dealID];
-        if (deal.influencer != msg.sender || deal.business != msg.sender)
+        if (msg.sender != deal.influencer && msg.sender != deal.business) {
             revert NotAuthorized();
+        }
 
         if (deal.state == State.APPLIED) {
             //If deal wasn't validated yet

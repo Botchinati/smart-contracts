@@ -11,7 +11,6 @@ interface IAgentRegistry {
     }
 
     struct Agent {
-        uint8 rating;
         bool slashed;
         AgentType agentType;
     }
